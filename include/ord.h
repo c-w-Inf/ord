@@ -16,6 +16,8 @@ class ordinal {
  public:
     [[nodiscard]]
     ordinal ();
+    [[nodiscard]]
+    ordinal (size_t);  // NOLINT(runtime/explicit)
 
     ordinal (const ordinal&) = default;
     ordinal (ordinal&&) = default;
@@ -42,6 +44,7 @@ class ordinal {
     friend std::ostream& operator<< (std::ostream&, const term&);
 
     friend ordinal psi (const ordinal&, const ordinal&);
+    friend ordinal psi (const ordinal&);
 
  private:
     ordinal& operator+= (const term&);
@@ -74,6 +77,7 @@ struct ordinal::cterm {
 extern const ordinal zero;
 extern const ordinal one;
 extern const ordinal omega;
+extern const ordinal Omega;
 
 [[nodiscard]]
 ordinal psi (const ordinal&, const ordinal&);

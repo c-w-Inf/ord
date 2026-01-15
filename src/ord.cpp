@@ -5,6 +5,13 @@
 namespace ord {
 
 ordinal::ordinal (): terms (0) {}
+ordinal::ordinal (size_t n) {
+    if (n) {
+        terms = std::vector<cterm> (1, {{zero, zero}, n});
+    } else {
+        terms = std::vector<cterm> (0);
+    }
+}
 
 ordinal::operator bool () const { return !terms.empty (); }
 
@@ -148,6 +155,10 @@ ordinal psi (const ordinal& id, const ordinal& v) {
     ordinal res;
     return res += id.tpsi (v);
 }
+ordinal psi (const ordinal& v) {
+    ordinal res;
+    return res += zero.tpsi (v);
+}
 
 ordinal& ordinal::operator+= (const term& t) {
     while (terms.size () > 0 && terms.back ().t < t) terms.pop_back ();
@@ -217,7 +228,8 @@ std::strong_ordering ordinal::term::operator<=> (const ordinal::term& o) const {
 }
 
 const ordinal zero = ordinal ();
-const ordinal one = psi (zero, zero);
-const ordinal omega = psi (zero, one);
+const ordinal one = psi (zero);
+const ordinal omega = psi (one);
+const ordinal Omega = psi (one, zero);
 
 }  // namespace ord

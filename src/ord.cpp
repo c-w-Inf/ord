@@ -1,5 +1,7 @@
 #include "ord.h"
 
+#include <iostream>
+
 namespace ord {
 
 ordinal::ordinal (): terms (0) {}
@@ -122,15 +124,6 @@ ordinal& ordinal::operator+= (ordinal&& o) {
     return *this;
 }
 
-ordinal psi (const ordinal& id, const ordinal& v) {
-    // TODO(c_wInf):
-    // check the validity of this combination
-
-    ordinal res;
-    res.terms.push_back ({{id, v}, 1});
-    return res;
-}
-
 std::ostream& operator<< (std::ostream& os, const ordinal& o) {
     if (o.terms.size ()) {
         size_t i = 0;
@@ -149,6 +142,70 @@ std::ostream& operator<< (std::ostream& os, const ordinal& o) {
 std::ostream& operator<< (std::ostream& os, const ordinal::term& t) {
     os << 'p' << t.id << '(' << t.v << ')';
     return os;
+}
+
+ordinal psi (const ordinal& id, const ordinal& v) {
+    ordinal res;
+    return res += id.tpsi (v);
+}
+
+ordinal& ordinal::operator+= (const term& t) {
+    while (terms.size () > 0 && terms.back ().t < t) terms.pop_back ();
+
+    if (terms.size () > 0 && terms.back ().t == t) {
+        ++terms.back ().c;
+    } else {
+        terms.emplace_back (t, 1);
+    }
+
+    return *this;
+}
+ordinal& ordinal::operator+= (term&& t) {
+    while (terms.size () > 0 && terms[terms.size () - 1].t < t) terms.pop_back ();
+
+    if (terms.size () > 0 && terms[terms.size () - 1].t == t) {
+        ++terms[terms.size () - 1].c;
+    } else {
+        terms.emplace_back (std::move (t), 1);
+    }
+
+    return *this;
+}
+
+ordinal::term ordinal::tpsi (const ordinal& v) const {
+    if (!v) return {*this, v};
+    if (v.terms[0].t.id < *this) return {*this, v};
+
+    auto bv = v.boost (v);
+    if (!bv.has_value ()) return {*this + one, zero};
+
+    return {*this, bv.value ()};
+}
+
+std::optional<ordinal> ordinal::boost (const ordinal& cv) const {
+    ordinal res;
+
+    for (const auto& [t, c] : terms) {
+        const auto& [id, v] = t;
+
+        auto obid = id.boost (cv);
+        if (!obid.has_value ()) return {};
+        auto& bid = obid.value ();
+
+        if (bid >= cv) return {};
+        if (bid > id) return res += bid.tpsi (zero);
+
+        auto obv = v.boost (cv);
+        if (!obv.has_value ()) return res += (id + one).tpsi (zero);
+        auto& bv = obv.value ();
+
+        if (bv >= cv) return res += (id + one).tpsi (zero);
+        if (bv > v) return res += id.tpsi (bv);
+
+        res.terms.emplace_back (t, c);
+    }
+
+    return res;
 }
 
 std::strong_ordering ordinal::term::operator<=> (const ordinal::term& o) const {

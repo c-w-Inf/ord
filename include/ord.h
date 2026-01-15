@@ -1,6 +1,7 @@
 #pragma once
 
 #include <compare>
+#include <optional>
 #include <ostream>
 #include <vector>
 
@@ -37,10 +38,19 @@ class ordinal {
     ordinal& operator+= (const ordinal&);
     ordinal& operator+= (ordinal&&);
 
-    friend ordinal psi (const ordinal&, const ordinal&);
-
     friend std::ostream& operator<< (std::ostream&, const ordinal&);
     friend std::ostream& operator<< (std::ostream&, const term&);
+
+    friend ordinal psi (const ordinal&, const ordinal&);
+
+ private:
+    ordinal& operator+= (const term&);
+    ordinal& operator+= (term&&);
+
+    [[nodiscard]]
+    term tpsi (const ordinal&) const;
+    [[nodiscard]]
+    std::optional<ordinal> boost (const ordinal&) const;
 };
 
 struct ordinal::term {
@@ -65,7 +75,10 @@ extern const ordinal zero;
 extern const ordinal one;
 extern const ordinal omega;
 
+[[nodiscard]]
 ordinal psi (const ordinal&, const ordinal&);
+[[nodiscard]]
+ordinal psi (const ordinal&);
 
 std::ostream& operator<< (std::ostream&, const ordinal&);
 std::ostream& operator<< (std::ostream&, const ordinal::term&);

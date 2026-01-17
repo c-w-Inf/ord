@@ -50,6 +50,10 @@ class ordinal {
 
     stdform std () const;
 
+    [[nodiscard]]
+    size_t complexity () const;
+    bool to_next (size_t);
+
  private:
     ordinal& operator+= (const term&);
     ordinal& operator+= (term&&);
@@ -58,10 +62,14 @@ class ordinal {
     term tpsi (const ordinal&) const;
     [[nodiscard]]
     std::optional<ordinal> boost (const ordinal&) const;
+
+    bool limit ();
 };
 
 struct ordinal::term {
     ordinal id, v;
+
+    bool limit ();
 
  public:
     [[nodiscard]]

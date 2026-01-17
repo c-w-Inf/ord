@@ -162,6 +162,23 @@ ordinal psi (const ordinal& v) {
 
 ordinal::stdform ordinal::std () const { return ordinal::stdform (*this); }
 
+size_t ordinal::complexity () const {
+    size_t res = 0;
+    for (const auto& [t, c] : terms) {
+        const auto& [id, v] = t;
+        res += (id.complexity () + v.complexity () + 1) * c;
+    }
+
+    return res;
+}
+
+bool ordinal::to_next (size_t bound) {
+    *this += one;
+    while (complexity () > bound)
+        if (!limit ()) return false;
+    return true;
+}
+
 ordinal& ordinal::operator+= (const term& t) {
     while (terms.size () > 0 && terms.back ().t < t) terms.pop_back ();
 
@@ -219,6 +236,50 @@ std::optional<ordinal> ordinal::boost (const ordinal& cv) const {
     }
 
     return res;
+}
+
+bool ordinal::limit () {
+    if (terms.size ()) {
+        auto [lt, lc] = std::move (terms.back ());
+        terms.pop_back ();
+
+        if (lc > 1) {
+            lt.v += one;
+            *this += std::move (lt);
+        } else {
+            if (lt.limit ()) {
+                if (terms.size () && terms.back ().t <= lt) {
+                    ++terms.back ().c;
+                } else {
+                    *this += lt;
+                }
+            } else {
+                if (terms.size ()) {
+                    ++terms.back ().c;
+                } else {
+                    return false;
+                }
+            }
+        }
+
+        return true;
+    } else {
+        return false;
+    }
+}
+
+bool ordinal::term::limit () {
+    if (v) {
+        if (v.limit ()) {
+            *this = id.tpsi (v);
+        } else {
+            id += one;
+        }
+    } else {
+        return id.limit ();
+    }
+
+    return true;
 }
 
 std::strong_ordering ordinal::term::operator<=> (const ordinal::term& o) const {

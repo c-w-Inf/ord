@@ -1,0 +1,75 @@
+<!doctype html>
+<html>
+    <head>
+        <title>Ord</title>
+        <script>
+            MathJax = {
+                tex: {
+                    inlineMath: [['$', '$']],
+                    displayMath: [['$$', '$$']],
+                },
+                cthml: {
+                    displayAlign: 'left',
+                    displayIndent: '0em',
+                },
+            }
+        </script>
+        <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+        <style>
+            mjx-container[jax="CHTML"] {
+                text-align: left
+                margin-left: 0
+            }
+        </style>
+    </head>
+    <body>
+        <h2>Ordinals...</h2>
+
+        <div
+            style="font-size: 2em; padding: 20px; border: 1px solid #ccc; margin: 20px; min-height: 100px"
+            id="formula"
+        >
+            $$ $$
+        </div>
+
+        <div style="margin: 20px">
+            <button onclick="togglePause()" id="pauseBtn">Pause</button>
+        </div>
+        <div style="margin: 20px">
+            <button onclick="toggleResume()" id="resumeBtn">Resume</button>
+        </div>
+
+        <script>
+            async function toggleResume() {
+                await fetch('/control/resume', { method: 'POST' })
+            }
+            async function togglePause() {
+                await fetch('/control/pause', { method: 'POST' })
+            }
+
+            let lastFrameTime = 0
+            function animation(curTime) {
+                if (curTime - lastFrameTime > 30) {
+                    lastFrameTime = curTime
+
+                    fetch('/next')
+                        .then((response) => response.text())
+                        .then((latex) => {
+                            document.getElementById('formula').innerHTML =
+                                `$$\\begin{flalign}&\\ ${latex}&\\nonumber\\end{flalign}$$`
+                            MathJax.typeset()
+                        })
+                        .catch((error) => {
+                            console.error('Failed to fetch formula:', error)
+                        })
+                }
+
+                requestAnimationFrame(animation)
+            }
+
+            window.onload = function () {
+                requestAnimationFrame(animation)
+            }
+        </script>
+    </body>
+</html>

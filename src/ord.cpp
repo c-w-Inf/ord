@@ -166,7 +166,7 @@ size_t ordinal::complexity () const {
     size_t res = 0;
     for (const auto& [t, c] : terms) {
         const auto& [id, v] = t;
-        res += (id.complexity () + v.complexity () + 1) * c;
+        res += std::max (id.complexity (), v.complexity ()) + c;
     }
 
     return res;

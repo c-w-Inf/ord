@@ -41,28 +41,18 @@
 
         <script>
             async function toggleResume() {
-                await fetch('/control/resume', { method: 'POST' })
+                await fetch('/control/resume')
             }
             async function togglePause() {
-                await fetch('/control/pause', { method: 'POST' })
+                await fetch('/control/pause')
             }
 
-            let lastFrameTime = 0
-            function animation(curTime) {
-                if (curTime - lastFrameTime > 30) {
-                    lastFrameTime = curTime
-
-                    fetch('/next')
-                        .then((response) => response.text())
-                        .then((latex) => {
-                            document.getElementById('formula').innerHTML =
-                                `$$\\begin{flalign}&\\ ${latex}&\\nonumber\\end{flalign}$$`
-                            MathJax.typeset()
-                        })
-                        .catch((error) => {
-                            console.error('Failed to fetch formula:', error)
-                        })
-                }
+            async function animation(curTime) {
+                const response = await fetch('/next')
+                const latex = await response.text()
+                document.getElementById('formula').innerHTML =
+                    `$$\\begin{flalign}&\\ ${latex}&\\nonumber\\end{flalign}$$`
+                MathJax.typeset()
 
                 requestAnimationFrame(animation)
             }

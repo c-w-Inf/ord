@@ -10,36 +10,30 @@
 #include "ord.h"
 
 class animation {
-    size_t bound;
-
     ord::ordinal o;
     std::shared_mutex m;
 
     std::thread t;
     std::condition_variable_any cv;
-    bool state = false;
-    bool stopped = false;
-
-    std::vector<size_t> wait_time;
+    std::atomic<bool> state = false;
+    std::atomic<bool> stopped = false;
 
  public:
-    animation (size_t bound, size_t rec, size_t ums): bound (bound), wait_time (1, rec) {
-        for (size_t i = 0; i < bound; ++i) {
-            wait_time.push_back (wait_time.back () * (rec + 1) / rec);
-        }
+    animation (size_t ums, std::vector<size_t>&& wt) {
+        t = std::thread ([this, ums, wt = std::move (wt)] {
+            const auto bound = wt.size ();
 
-        t = std::thread ([this, ums] {
             for (size_t ut = 0;;) {
                 std::unique_lock l (m);
-                cv.wait (l, [this] { return state; });
+                cv.wait (l, [this] () -> bool { return state; });
                 if (stopped) break;
 
                 while (ut < ums) {
-                    if (!o.to_next (this->bound)) {
+                    if (!o.to_next (bound)) {
                         stopped = true;
                         break;
                     }
-                    ut += wait_time[this->bound - o.complexity ()];
+                    ut += wt[bound - o.complexity ()];
                 }
 
                 l.unlock ();
@@ -50,20 +44,16 @@ class animation {
     }
 
     void start () {
-        std::unique_lock l (m);
         state = true;
-        l.unlock ();
         cv.notify_one ();
     }
 
-    void pause () {
-        std::unique_lock l (m);
-        state = false;
-    }
+    void pause () { state = false; }
 
     std::optional<std::string> get () {
-        std::shared_lock l (m);
         if (stopped) return {};
+
+        std::unique_lock l (m);
 
         std::stringstream ss;
         ss << o.std ();
@@ -71,23 +61,23 @@ class animation {
     }
 
     ~animation () {
-        std::shared_lock l (m);
         stopped = true;
-        l.unlock ();
 
         if (t.joinable ()) t.join ();
     }
 };
 
 int main (int argc, char** argv) {
-    size_t bound = 100, rec = 10, ums = 2000;
-    if (argc == 4) {
+    size_t ums = 10;
+    std::vector<size_t> wait_time = {10, 12, 15, 22, 30, 50, 80, 120, 200, 300, 500, 800, 1200, 2000, 3000, 5000};
+
+    if (argc > 2) {
         try {
-            bound = std::stoull (argv[1], nullptr, 10);
-            rec = std::stoull (argv[2], nullptr, 10);
-            ums = std::stoull (argv[3], nullptr, 10);
+            ums = std::stoull (argv[1], nullptr, 10);
+            for (size_t i = 2; i < argc; ++i) wait_time.push_back (std::stoull (argv[1], nullptr, 10));
         } catch (...) {
-            bound = 100, rec = 10, ums = 2000;
+            std::cerr << "invalid argument" << std::endl;
+            return 0;
         }
     }
 
@@ -100,7 +90,7 @@ int main (int argc, char** argv) {
     ss << findex.rdbuf ();
     std::string index = ss.str ();
 
-    animation a (bound, rec, ums);
+    animation a (ums, std::move (wait_time));
 
     httplib::Server svr;
 
@@ -117,9 +107,15 @@ int main (int argc, char** argv) {
         res.set_content ((str.has_value () ? str.value () : "---"), "text/plain");
     });
 
-    svr.Post ("/control/resume", [&] (const httplib::Request&, httplib::Response& res) { a.start (); });
+    svr.Get ("/control/resume", [&] (const httplib::Request&, httplib::Response& res) {
+        a.start ();
+        res.status = 204;
+    });
 
-    svr.Post ("/control/pause", [&] (const httplib::Request&, httplib::Response& res) { a.pause (); });
+    svr.Get ("/control/pause", [&] (const httplib::Request&, httplib::Response& res) {
+        a.pause ();
+        res.status = 204;
+    });
 
     svr.listen ("0.0.0.0", 8080);
 

@@ -4,13 +4,15 @@
         <title>Ord</title>
         <script>
             MathJax = {
+                loader: {
+                    load: ['[tex]/color', '[tex]/textmacros'],
+                },
                 tex: {
+                    packages: {
+                        '[+]': ['color', 'textmacros'],
+                    },
                     inlineMath: [['$', '$']],
                     displayMath: [['$$', '$$']],
-                },
-                cthml: {
-                    displayAlign: 'left',
-                    displayIndent: '0em',
                 },
             }
         </script>

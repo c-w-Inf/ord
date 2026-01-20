@@ -13,6 +13,8 @@ class animation {
     ord::ordinal o;
     std::shared_mutex m;
 
+    size_t bound;
+
     std::thread t;
     std::condition_variable_any cv;
     std::atomic<bool> state = false;
@@ -20,9 +22,9 @@ class animation {
 
  public:
     animation (size_t ums, std::vector<size_t>&& wt) {
-        t = std::thread ([this, ums, wt = std::move (wt)] {
-            const auto bound = wt.size ();
+        bound = wt.size () - 1;
 
+        t = std::thread ([this, ums, wt = std::move (wt)] {
             for (size_t ut = 0;;) {
                 std::unique_lock l (m);
                 cv.wait (l, [this] () -> bool { return state; });
@@ -54,9 +56,16 @@ class animation {
         if (stopped) return {};
 
         std::unique_lock l (m);
+        auto complex = o.complexity ();
+        auto stdf = o.std ();
+        l.unlock ();
+
+        static const std::string clrs[] = {"Violet",      "Blue",      "Navy",   "RoyalBlue",   "Teal",
+                                           "ForestGreen", "OliveDrab", "Sienna", "SaddleBrown", "Maroon"};
+        static constexpr auto nclrs = sizeof (clrs) / sizeof (clrs[0]);
 
         std::stringstream ss;
-        ss << o.std ();
+        ss << "\\textcolor{" << clrs[complex * nclrs / (bound + 1)] << "}{" << stdf << '}';
         return ss.str ();
     }
 
@@ -68,17 +77,20 @@ class animation {
 };
 
 int main (int argc, char** argv) {
-    size_t ums = 10;
+    size_t port = 1584, ums = 10;
     std::vector<size_t> wait_time = {10, 12, 15, 22, 30, 50, 80, 120, 200, 300, 500, 800, 1200, 2000, 3000, 5000};
 
-    if (argc > 2) {
-        try {
-            ums = std::stoull (argv[1], nullptr, 10);
+    try {
+        if (argc == 2) {
+            port = std::stoull (argv[1], nullptr, 10);
+        } else if (argc > 3) {
+            port = std::stoull (argv[1], nullptr, 10);
+            ums = std::stoull (argv[2], nullptr, 10);
             for (size_t i = 2; i < argc; ++i) wait_time.push_back (std::stoull (argv[1], nullptr, 10));
-        } catch (...) {
-            std::cerr << "invalid argument" << std::endl;
-            return 0;
         }
+    } catch (...) {
+        std::cerr << "invalid argument" << std::endl;
+        return 0;
     }
 
     std::ifstream findex ("index.html");
@@ -117,7 +129,8 @@ int main (int argc, char** argv) {
         res.status = 204;
     });
 
-    svr.listen ("0.0.0.0", 8080);
+    std::cout << "ord listening to port " << port << std::endl;
+    svr.listen ("0.0.0.0", port);
 
     return 0;
 }
